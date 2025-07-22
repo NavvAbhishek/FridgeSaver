@@ -6,6 +6,7 @@ import com.example.fridgesaver.dto.SignUpRequest;
 import com.example.fridgesaver.entity.User;
 import com.example.fridgesaver.repository.UserRepository;
 import com.example.fridgesaver.security.JwtUtil;
+import com.example.fridgesaver.security.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,10 @@ public class AuthController {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtil.generateJwtToken(authentication);
 
-        return ResponseEntity.ok(new JwtResponse(jwt));
+        // Get the full user details from the authentication object
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getName()));
     }
 
     @PostMapping("/register")

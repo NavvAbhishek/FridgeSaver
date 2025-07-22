@@ -24,6 +24,7 @@ class FridgeSaverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'FridgeSaver',
       theme: ThemeData(
         primaryColor: const Color(0xFF2E7D32), // A deep green color

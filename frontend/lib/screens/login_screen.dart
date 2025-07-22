@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/rounded_button.dart';
 import '../widgets/rounded_input_field.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -15,30 +17,63 @@ class _LoginScreenState extends State<LoginScreen> {
   String _email = '';
   String _password = '';
   bool _isLoading = false;
+  String _errorMessage = '';
+
+  //final String _baseUrl = "http://10.0.2.2:8080/api/auth";
+
+  // for temporarly run app in browser
+  final String _baseUrl = "http://localhost:8080/api/auth";
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       setState(() {
         _isLoading = true;
+        _errorMessage = '';
       });
 
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        final response = await http.post(
+          Uri.parse('$_baseUrl/login'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'email': _email,
+            'password': _password,
+          }),
+        );
 
-      const mockToken =
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkZsdXR0ZXIgRGV2IiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        if (response.statusCode == 200) {
+          final responseBody = jsonDecode(response.body);
+          final token = responseBody['token'];
+          final userName = responseBody['name'];
 
-      // Store the token using shared_preferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwt_token', mockToken);
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', token);
+          await prefs.setString('user_name', userName);
 
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Navigate to home screen, removing all previous routes
-      if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/home', (route) => false);
+          }
+        } else {
+          setState(() {
+            _errorMessage = 'Error: Invalid credentials. Please try again.';
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage =
+              'Error: Could not connect to the server. Please check your connection.';
+        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 

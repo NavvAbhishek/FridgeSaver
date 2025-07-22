@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import '../widgets/rounded_button.dart';
 import '../widgets/rounded_input_field.dart';
 
@@ -16,27 +18,59 @@ class _SignupScreenState extends State<SignupScreen> {
   String _email = '';
   String _password = '';
   bool _isLoading = false;
+  String _errorMessage = '';
+
+  //final String _baseUrl = "http://10.0.2.2:8080/api/auth";
+
+  // for temporarly run app in browser
+  final String _baseUrl = "http://localhost:8080/api/auth";
 
   Future<void> _signup() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       setState(() {
         _isLoading = true;
+        _errorMessage = '';
       });
 
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        final response = await http.post(
+          Uri.parse('$_baseUrl/register'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'name': _name,
+            'email': _email,
+            'password': _password,
+          }),
+        );
 
-      const mockToken =
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkZsdXR0ZXIgRGV2IiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwt_token', mockToken);
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        if (response.statusCode == 200) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Registration successful! Please login.')),
+            );
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        } else {
+          final responseBody = jsonDecode(response.body);
+          setState(() {
+            _errorMessage = responseBody.toString();
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Error: Could not connect to the server.';
+        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 

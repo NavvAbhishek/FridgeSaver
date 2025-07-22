@@ -15,17 +15,20 @@ public class UserDetailsImpl implements UserDetails {
 
     private final Long id;
     private final String email;
+    private String name;
     private final String password;
 
-    public UserDetailsImpl(Long id, String email, String password) {
+    public UserDetailsImpl(Long id,String name, String email, String password) {
         this.id = id;
         this.email = email;
+        this.name = name;
         this.password = password;
     }
 
     public static UserDetailsImpl build(User user) {
         return new UserDetailsImpl(
                 user.getId(),
+                user.getName(),
                 user.getEmail(),
                 user.getPassword());
     }
@@ -39,7 +42,7 @@ public class UserDetailsImpl implements UserDetails {
     public Long getId() {
         return id;
     }
-
+    public String getName() { return name; }
     @Override
     public String getPassword() {
         return password;
