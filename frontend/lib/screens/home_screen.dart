@@ -1,42 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/inventory_item_model.dart';
+import '../services/api_service.dart';
+import '../widgets/inventory_list_item.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _userName = '';
+  late Future<List<InventoryItem>> _inventoryFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadInventory();
   }
 
-  // Load the user's name from shared preferences
-  Future<void> _loadUserName() async {
-    final prefs = await SharedPreferences.getInstance();
+  void _loadInventory() {
     setState(() {
-      // Use the '??' operator to provide a default value if the name is not found
-      _userName = prefs.getString('user_name') ?? 'User';
+      _inventoryFuture = ApiService.getInventoryItems();
     });
   }
 
-  // --- Logout Function ---
   Future<void> _logout(BuildContext context) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
-    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all data on logout
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    }
+  }
+
+  void _deleteItem(int id) async {
+    try {
+      await ApiService.deleteItem(id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Item deleted successfully'),
+            backgroundColor: Colors.green),
+      );
+      _loadInventory(); // Refresh the list after deleting
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Failed to delete item: $e'),
+            backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final firstName = _userName.split(' ').first;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Fridge"),
@@ -48,30 +65,47 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                // Display personalized welcome message
-                _userName.isEmpty ? 'Loading...' : 'Welcome $firstName',
+      body: FutureBuilder<List<InventoryItem>>(
+        future: _inventoryFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text(
+                "Your fridge is empty.\nTap the '+' button to add an item!",
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontSize: 28),
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                "Your inventory will be here soon.\nLet's get started!",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+            );
+          }
+
+          // Data has been successfully loaded
+          final items = snapshot.data!;
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              return InventoryListItem(
+                item: items[index],
+                onDelete: () => _deleteItem(items[index].id),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          // Navigate to AddItemScreen and wait for a result
+          final result = await Navigator.pushNamed(context, '/add_item');
+          // If an item was added, refresh the list
+          if (result == true) {
+            _loadInventory();
+          }
+        },
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        child: const Icon(Icons.add),
       ),
     );
   }

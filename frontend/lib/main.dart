@@ -4,6 +4,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/add_item_screen.dart';
 
 void main() async {
   // Ensure that Flutter bindings are initialized before calling async code.
@@ -69,6 +70,7 @@ class FridgeSaverApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
         '/home': (context) => const HomeScreen(),
+        '/add_item': (context) => const AddItemScreen(),
       },
     );
   }

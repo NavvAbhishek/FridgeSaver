@@ -6,6 +6,8 @@ class RoundedInputField extends StatelessWidget {
   final bool obscureText;
   final FormFieldSetter<String> onSaved;
   final FormFieldValidator<String>? validator;
+  final TextInputType? keyboardType;
+  final String? initialValue;
 
   const RoundedInputField({
     Key? key,
@@ -14,11 +16,15 @@ class RoundedInputField extends StatelessWidget {
     this.obscureText = false,
     required this.onSaved,
     this.validator,
+    this.keyboardType,
+    this.initialValue,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      initialValue: initialValue,
+      keyboardType: keyboardType,
       obscureText: obscureText,
       onSaved: onSaved,
       validator: validator,
